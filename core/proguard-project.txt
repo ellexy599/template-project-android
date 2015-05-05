@@ -1,0 +1,60 @@
+-ignorewarnings
+-dontskipnonpubliclibraryclasses
+
+-dontwarn com.google.common.**
+-dontwarn com.squareup.okhttp.**
+-dontwarn javax.xml.stream.events.**
+-dontwarn org.codehaus.jackson.**
+-dontwarn org.springframework.**
+-dontwarn rx.**
+-dontwarn retrofit.**
+
+#-dontoptimize
+#-dontpreverify
+
+# temporarily disable obsfuscation in development
+-dontobfuscate
+
+-keepattributes SourceFile,LineNumberTable, Signature,*Annotation*
+
+# Project
+-keep class com.template.project.core.** { *; }
+-keep interface com.template.project.core.** { *; }
+
+# Android v4 support library
+-keep class android.support.v4.** { *;}
+-keep interface android.support.v4.** { *;}
+-keep class com.google.android.support.v4.** { *;}
+-keep interface com.google.android.support.v4.** { *;}
+
+# Android v7 support library
+-keep class com.google.android.support.v7.** { *;}
+-keep interface com.google.android.support.v7.** { *;}
+
+
+# Retrofit
+-keep class com.squareup.retrofit.** { *; }
+-keep interface com.squareup.retrofit.** { *; }
+-keepclasseswithmembers class * {
+    @retrofit.http.* <methods>;
+}
+
+#OkHttp
+-keep class com.squareup.okhttp.** { *; }
+-keep interface com.squareup.okhttp.** { *; }
+
+-keepclassmembernames interface * {
+    @retrofit.http.* <methods>;
+}
+
+-keep class retrofit.** { *; }
+-keepclassmembernames interface * {
+    @retrofit.http.* <methods>;
+}
+
+# Picasso image loader
+-keep class com.squareup.picasso.** { *; }
+-keep interface com.squareup.picasso.** { *; }
+
+
+

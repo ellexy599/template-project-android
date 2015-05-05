@@ -1,0 +1,4 @@
+include ':core',':app'
+
+// Core module contains all http calls, entity classes, databases, and utility classes
+// App module contains the application component
