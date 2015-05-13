@@ -6,6 +6,8 @@ import android.media.MediaPlayer;
 import java.io.File;
 import java.util.ArrayList;
 
+import com.template.project.core.utils.LogMe;
+
 /** Utility class for playing background music. Playing a sound file require permission in manifest.
  * <pre>
  * &lt;uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/&gt;

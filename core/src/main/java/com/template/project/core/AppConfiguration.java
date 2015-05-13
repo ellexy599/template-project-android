@@ -13,6 +13,6 @@ public class AppConfiguration {
     public static final String HOST_API_ROOT_URI = "/api/";
 
     public static final String GOOGLE_API_PROJ_NUMBER = "your google project api number for maps, gcm";
-    public static final boolean ENABLE_LOG = true;
+    public static boolean ENABLE_LOG = true;
 
 }
