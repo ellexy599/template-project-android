@@ -19,7 +19,6 @@ public class NetConnUtil {
 
     private final String TAG = NetConnUtil.class.getSimpleName();
 
-    private Activity mActivity;
     private Context mContext;
     private NetConnListener mNetConnListener;
 
@@ -32,22 +31,21 @@ public class NetConnUtil {
     }
 
     /**
-     * Check if network connection can connect to server.
-     * @return true If network connectivity exists and returning data; false otherwise
+     * Check if network connection can connect to server. This will execute Asynctask.
      */
-    public void checkUrlConnectivity(Context mContext, Activity mActivity,
-                                     String urlServerLink, NetConnListener netConnListener)
+    public void checkConnectionToServer(Context mContext, String urlServerLink,
+                                     NetConnListener netConnListener)
             throws InterruptedException, ExecutionException {
-        this.mActivity = mActivity;
         this.mContext = mContext;
         this.mNetConnListener = netConnListener;
+        new CheckInternetAsync().execute(new String[] {urlServerLink});
     }
 
     /**
      * Check network connectivity.
      * @return true if device is connected, false otherwise.
      */
-    public static boolean hasNetworkConnectivity(Context ctx) {
+    public boolean hasNetworkConnectivity(Context ctx) {
         ConnectivityManager cm = (ConnectivityManager) ctx.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo netInfo = cm.getActiveNetworkInfo();
         if (netInfo != null && netInfo.isConnected()) {

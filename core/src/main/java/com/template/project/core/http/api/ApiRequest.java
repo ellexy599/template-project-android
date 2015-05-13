@@ -1,12 +1,14 @@
 package com.template.project.core.http.api;
 
+import android.content.Context;
+
 import com.squareup.okhttp.OkHttpClient;
 import com.template.project.core.AppConfiguration;
 import com.template.project.core.entity.User;
 import com.template.project.core.http.HttpParams;
 import com.template.project.core.http.HttpResponse;
-import com.template.project.core.http.json.ApiServiceType;
 import com.template.project.core.utils.LogMe;
+import com.template.project.core.utils.conn.NetConnUtil;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -23,6 +25,7 @@ import retrofit.ErrorHandler;
 import retrofit.RequestInterceptor;
 import retrofit.RestAdapter;
 import retrofit.RetrofitError;
+import retrofit.client.Client;
 import retrofit.client.OkClient;
 import retrofit.client.Request;
 import retrofit.client.Response;
@@ -37,37 +40,50 @@ public class ApiRequest {
 
     private static final String TAG = ApiRequest.class.getSimpleName();
 
-    public static int TIMEOUT = 10000;// default timeout
+    public static int TIMEOUT = 30;// default http request timeout in seconds
 
-    private ApiServiceType apiServiceType;
-    private ApiCallback apiCallback;
+    private Context mCtx;
+
+    private ApiServiceType mApiServiceType;
+    private ApiCallback mApiCallback;
     private ApiResponse apiResponse;
-    private boolean mIsAsynchronous;
+
+    // Determine if Retrofit will be used as synchronous, meaning no Callback to API service
+    private boolean mIsSynchronous;
+
+    // Determine if ApiRequest will notify Callback
+    // This can be used if Activity has been destroyed while request is in progress
+    private boolean mIsDontNotifyCallback;
 
     private RestAdapter.Builder retrofitRestBuilder;
     private HttpErrorHandler httpErrorHandler;
-    private OkHttpClient httpClient;
 
     public static final String HEADER_AUTHORIZATION = "Authorization";
 
     /**
      * Create ApiRequest instance to perform http calls.
+     * @param ctx The Application or Activity context.
      * @param apiApiServiceType The API service to call.
      * @param apiCallback The Callback of http call execution.
      *
      */
-    public ApiRequest(ApiServiceType apiApiServiceType, ApiCallback apiCallback) {
-        this.apiServiceType = apiApiServiceType;
-        this.apiCallback = apiCallback;
+    public ApiRequest(Context ctx, ApiServiceType apiApiServiceType, ApiCallback apiCallback) {
+        this.mCtx = ctx;
+        this.mApiServiceType = apiApiServiceType;
+        this.mApiCallback = apiCallback;
         httpErrorHandler = new HttpErrorHandler();
-        httpClient = new OkHttpClient();
-        httpClient.setConnectTimeout(30, TimeUnit.SECONDS);
-        httpClient.setReadTimeout(30, TimeUnit.SECONDS);
-        httpClient.setWriteTimeout(30, TimeUnit.SECONDS);
+
+        OkHttpClient httpClient = new OkHttpClient();
+        httpClient.setConnectTimeout(TIMEOUT, TimeUnit.SECONDS);
+        httpClient.setReadTimeout(TIMEOUT, TimeUnit.SECONDS);
+        httpClient.setWriteTimeout(TIMEOUT, TimeUnit.SECONDS);
+        OkClient client = new OkClient(httpClient);
+
         retrofitRestBuilder = new RestAdapter.Builder()
-                .setClient(new OkClient(httpClient))
+                .setClient(new ApiRequestClient(client))
                 .setEndpoint(AppConfiguration.HOST)
                 .setErrorHandler(httpErrorHandler);
+
         if(AppConfiguration.ENABLE_LOG) {
             retrofitRestBuilder.setLogLevel(RestAdapter.LogLevel.FULL);
         } else {
@@ -76,14 +92,28 @@ public class ApiRequest {
     }
 
     /**
-     * Set the timeout of http request in millisecond. By default the timeout is 10000ms.
-     * @param requestTimeout Millisecond value of timeout of http request.
+     * Set the timeout of http request in seconds. By default the timeout is 30 seconds.
+     * @param requestTimeout Seconds value of timeout of http request.
      */
     public void setRequestTimeout(int requestTimeout) {
         if (requestTimeout > TIMEOUT) {
             TIMEOUT = requestTimeout;
-            retrofitRestBuilder.setClient(new HttpConnectionClient(TIMEOUT));
+            OkHttpClient httpClient = new OkHttpClient();
+            httpClient.setConnectTimeout(requestTimeout, TimeUnit.SECONDS);
+            httpClient.setReadTimeout(requestTimeout, TimeUnit.SECONDS);
+            httpClient.setWriteTimeout(requestTimeout, TimeUnit.SECONDS);
+            OkClient client = new OkClient(httpClient);
+            retrofitRestBuilder.setClient(client);
+            // retrofitRestBuilder.setClient(new HttpConnectionClient(TIMEOUT));
         }
+    }
+
+    /**
+     * Calling this will not notify any ApiCallback even if the request has been finished.
+     * This can be used when a current ApiRequest is in progress and Activity was destroyed.
+     */
+    public void dontNotifyCallback() {
+        mIsDontNotifyCallback = false;
     }
 
     /**
@@ -96,18 +126,24 @@ public class ApiRequest {
         Callback retrofitCallback = new Callback() {
             @Override
             public void success(Object o, Response response) {
-                handleRetrofitResponse(response);
+                if ( !mIsDontNotifyCallback ) {
+                    handleRetrofitResponse(response);
+                }
             }
 
             @Override
             public void failure(RetrofitError retrofitError) {
-                handleRetrofitError(retrofitError);
+                if ( !mIsDontNotifyCallback) {
+                    handleRetrofitError(retrofitError);
+                }
             }
         };
+
         HeaderRequestInterceptor header = new HeaderRequestInterceptor();
         Response response = null;
         String responseBody = "(empty)";
-        if (apiServiceType == ApiServiceType.USER_REGISTER) {
+
+        if (mApiServiceType == ApiServiceType.USER_REGISTER) {
             //header.addAccessToken("my access token value");
             //header.addHeader("Set-Cookie or any header key name", "the header value");
             retrofitRestBuilder.setRequestInterceptor(header);
@@ -115,7 +151,7 @@ public class ApiRequest {
             User user = httpParams.getUser();
             //response = apiService.register(user.getEmail(), user.getPassword());
             apiService.register(user.getEmail(), user.getPassword(), retrofitCallback);
-        } else if (apiServiceType == ApiServiceType.USER_UPDATE) {
+        } else if (mApiServiceType == ApiServiceType.USER_UPDATE) {
             retrofitRestBuilder.setRequestInterceptor(header);
             ApiService apiService = retrofitRestBuilder.build().create(ApiService.class);
             User user = httpParams.getUser();
@@ -123,7 +159,7 @@ public class ApiRequest {
             TypedString partPassword = new TypedString(user.getPassword());
             TypedFile partPhoto = new TypedFile("image/*", new File(""));
             apiService.updateUser(partEmail, partPassword, partPhoto, retrofitCallback);
-        } else if(apiServiceType == ApiServiceType.USER_GET_DETAILS) {
+        } else if(mApiServiceType == ApiServiceType.USER_GET_DETAILS) {
             retrofitRestBuilder.setRequestInterceptor(header);
             ApiService apiService = retrofitRestBuilder.build().create(ApiService.class);
             User user = httpParams.getUser();
@@ -140,16 +176,16 @@ public class ApiRequest {
         try {
             if(response != null) {
                 responseBody = getBodyString(response);
-                apiCallback.onSuccess(initApiResponse(response, responseBody));
+                mApiCallback.onSuccess(initApiResponse(response, responseBody));
             }
         } catch (IOException e) {
-            apiCallback.onFailed(initFailedResponse());
+            mApiCallback.onFailed(initFailedResponse());
             LogMe.e(TAG, "status: " + response.getStatus() + " body: " + responseBody
                         + " ERROR " + e.toString());
         }
     }
 
-    // handle http error reponse
+    // handle http error response
     private Throwable handleRetrofitError(RetrofitError cause) {
         Response r = cause.getResponse();
         if(r != null) {
@@ -180,12 +216,12 @@ public class ApiRequest {
             }
             LogMe.e(TAG, "handleError Response is null");
         }
-        apiCallback.onFailed(apiResponse);
+        mApiCallback.onFailed(apiResponse);
         return cause;
     }
 
     /*
-     * Initialize ApiResponse object to pass to apiCallback.
+     * Initialize ApiResponse object to pass to mApiCallback.
      */
     private ApiResponse initApiResponse(Response response, String body) {
         if(response != null) {
@@ -199,7 +235,7 @@ public class ApiRequest {
 
     /*
      * Initialize failed http request.
-     * @return The replaced String body of request to pass to apiCallback.
+     * @return The replaced String body of request to pass to mApiCallback.
      */
     private ApiResponse initFailedResponse() {
         return new HttpResponse(ApiStatusCode.SOCKET_CONNECTION_TIMEOUT);
@@ -252,24 +288,29 @@ public class ApiRequest {
         return baos.toByteArray();
     }
 
-    /**
-     * Http request apiCallback.
-     */
-    public static interface ApiCallback {
-        /**
-         * Event listener once http request finished.
-         * @param apiResponse The String http response body.
-         */
-        void onSuccess(ApiResponse apiResponse);
+    /* Http Client used by Retrofit to be able to handle device not connected to
+       network and immediately throw reponse of connection timeout */
+    private class ApiRequestClient implements Client {
 
-        /**
-         * Event listener once http request failed.
-         * @param apiResponse The String http response body.
-         */
-        void onFailed(ApiResponse apiResponse);
+        private Client client;
+
+        public ApiRequestClient(Client client) {
+            this.client = client;
+        }
+
+        @Override
+        public Response execute(Request request) throws IOException {
+            if ( !NetConnUtil.getInstance().hasNetworkConnectivity(mCtx) ) {
+                // return REQUEST_TIMEOUT http status error if no network connectivity
+                return new Response(request.getUrl(), ApiStatusCode.REQUEST_TIMEOUT.getCode(),
+                        null, null, null);
+            } else {
+                return client.execute(request);
+            }
+        }
     }
 
-    // add header to http request
+    // Add header to http request
     private class HeaderRequestInterceptor implements RequestInterceptor {
         private HashMap<String, String> headers = new HashMap<>();
 
@@ -292,7 +333,7 @@ public class ApiRequest {
         }
     }
 
-    // custom UrlConnectionClient for Retrofit client to be able to set timeout
+    // Custom UrlConnectionClient for Retrofit client to be able to set timeout
     private class HttpConnectionClient extends UrlConnectionClient {
         private int timeoutMs = 30000;
 
@@ -310,7 +351,7 @@ public class ApiRequest {
     }
 
     /*
-    * set error handler of retrofit http client. For more details see
+    * Set error handler of retrofit http client. For more details see
     * http://blog.robinchutaux.com/blog/a-smart-way-to-use-retrofit/ and
     * http://square.github.io/retrofit/
     */
