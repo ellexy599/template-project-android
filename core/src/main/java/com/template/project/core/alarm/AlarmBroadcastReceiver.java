@@ -9,9 +9,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.TaskStackBuilder;
 
-import com.template.project.core.utils.file.OsUtils;
+import com.template.project.core.utils.file.OsUtil;
 
 /**
  * Broadcast receiver of set alarm.
@@ -68,7 +67,7 @@ public class AlarmBroadcastReceiver extends BroadcastReceiver {
                     (int) System.currentTimeMillis(), new Intent(), 0);
 
             Notification notif;
-            if(OsUtils.getOsApiLevel() <= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+            if(OsUtil.getOsApiLevel() <= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
                 notif =new Notification();
                 notif.icon = iconId;
                 notif.tickerText= message;

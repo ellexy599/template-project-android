@@ -7,9 +7,9 @@ import android.os.Build;
 
 import com.template.project.core.utils.LogMe;
 
-public class OsUtils {
+public class OsUtil {
 
-    private static final String TAG = OsUtils.class.getSimpleName();
+    private static final String TAG = OsUtil.class.getSimpleName();
 
     /**
      * Get the OS

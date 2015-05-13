@@ -1,69 +1,193 @@
 package com.template.project.core.http.api;
 
+import com.template.project.core.http.HttpStatusCode;
+import com.template.project.core.http.json.JsonName;
+import com.template.project.core.utils.LogMe;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.net.CookieHandler;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+
+import retrofit.client.Header;
 import retrofit.client.Response;
 
-public interface ApiResponse {
+/**
+ * Holds the http status code of all http request called and contains the
+ * API Server Status Message if the response codeMessage of http request has the
+ * JSON format of it.
+ */
+public class ApiResponse implements com.template.project.core.http.HttpResponse {
+
+    private final String TAG = ApiResponse.class.getSimpleName();
+
+    public static final String HEADER_COOKIE = "Cookie";
+    public static final String HEADER_COOKIE_RESPONSE = "Set-Cookie";
+
+    private int mCode;
+    private String mCodeName;
+    private String mCodeMessage;
+    private String mResponseBody;
+    private boolean mIsRequestSuccess = true;
+
+    // Message to be thrown to HttpResponse for unexpected error or connection timeout.
+    private final String MSG_NETWORK_TIMEOUT = "Could not connect to server. Please check your connection.";
+    private final String MSG_UNEXPECTED_ERROR = "Oops! Something went wrong. Please try again after a few minutes.";
+
+    @Override
+    public int getCode() {
+        return this.mCode;
+    }
+
+    @Override
+    public void setCode(int code) {
+        this.mCode = code;
+    }
+
+    @Override
+    public String getCodeName() {
+        return this.mCodeName;
+    }
+
+    @Override
+    public void setCodeName(String name) {
+        this.mCodeName = name;
+    }
+
+    @Override
+    public String getCodeMessage() {
+        return mCodeMessage;
+    }
+
+    @Override
+    public void setCodeMessage(String codeMessage) {
+        this.mCodeMessage = codeMessage;
+    }
+
+    @Override
+    public String getResponseBody() {
+        return this.mResponseBody;
+    }
+
+    @Override
+    public void setResponseBody(String responseBody) {
+        this.mResponseBody = responseBody;
+    }
+
+    @Override
+    public boolean isReqSuccess() {
+        return mIsRequestSuccess;
+    }
+
+    @Override
+    public void setReqSuccess(boolean isReqSuccess) {
+        this.mIsRequestSuccess = isReqSuccess;
+    }
+
+    @Override
+    public void initHttpResponse(Response response) {
+        if(response != null) {
+            boolean hasCatchResponseCode = false;
+            mCode = response.getStatus();
+            for(HttpStatusCode httpStatusCode : HttpStatusCode.values()) {
+                if(mCode == httpStatusCode.getCode()) {
+                    mIsRequestSuccess = httpStatusCode.isSuccess();
+                    hasCatchResponseCode = true;
+                }
+            }
+            if(!hasCatchResponseCode) {
+                LogMe.w(TAG, "initHttpResponse hasCatchResponseCode: " + hasCatchResponseCode);
+                // didn't recognize response or response is unexpected
+                HttpStatusCode genericError = HttpStatusCode.UNEXPECTED_ERROR;
+                mCode = genericError.getCode();
+                mCodeMessage = MSG_UNEXPECTED_ERROR;
+                mIsRequestSuccess = false;
+            }
+        }
+    }
+
+    public ApiResponse() {
+        // allow empty initialization
+    }
 
     /**
-     * Get the MessageCode of the reponse of http request.
-     * @return The HttpStatus code.
+     * Initialize HttpStatusCode from the reponse of the http request
+     * @param response Response obtained from the request reponse
+     * @param httpResponseBody The String value of the response of the request.
+     *         This value will contain the API Server Status Message if it is the
+     *         returned codeMessage of the request
      */
-    int getCode();
+    public ApiResponse(Response response, String httpResponseBody) {
+        this.mResponseBody = httpResponseBody;
+        initHttpResponse(response);
+        // initialize codeMessage value
+        if(mCode == HttpStatusCode.SOCKET_CONNECTION_TIMEOUT.getCode()) {
+            this.mCodeMessage = MSG_NETWORK_TIMEOUT;
+        } else if(mCode == HttpStatusCode.INTERNAL_SERVER_ERROR.getCode() ||
+                mCode == HttpStatusCode.UNEXPECTED_ERROR.getCode()) {
+            this.mCodeMessage = MSG_UNEXPECTED_ERROR;
+        } else if(httpResponseBody.contains(JsonName.HTTP_RESPONSE_STATUS) &&
+                httpResponseBody.startsWith("{") && httpResponseBody.endsWith("}")) {
+            try {
+                JSONObject jsonObj = new JSONObject(httpResponseBody);
+                this.mCodeMessage = jsonObj.getString(JsonName.HTTP_RESPONSE_STATUS);
+            } catch (JSONException e) {
+                LogMe.w(TAG, "HttpResponse could not extract 'message' JSON field value.");
+            }
+        }
+    }
 
     /**
-     * Set HttpStatus code or the Http Status Code.
+     * This constructor is used to initialize HttpResponse
+     * for network issue and unexpected error only.
      */
-    void setCode(int code);
+    public ApiResponse(HttpStatusCode httpStatusCode) {
+        mCode = httpStatusCode.getCode();
+        mCodeName = httpStatusCode.getCodeName();
+        if(httpStatusCode.equals(HttpStatusCode.SOCKET_CONNECTION_TIMEOUT)) {
+            mIsRequestSuccess = false;
+            mCodeMessage = MSG_NETWORK_TIMEOUT;
+        } else if(httpStatusCode.equals(HttpStatusCode.UNEXPECTED_ERROR) ||
+                httpStatusCode.equals(HttpStatusCode.INTERNAL_SERVER_ERROR)) {
+            mIsRequestSuccess = false;
+            mCodeMessage = MSG_UNEXPECTED_ERROR;
+        } else if(mResponseBody.contains(JsonName.HTTP_RESPONSE_STATUS_MESSAGE) &&
+                mResponseBody.startsWith("{") && mResponseBody.endsWith("}")) {
+            try {
+                JSONObject jsonObj = new JSONObject(mResponseBody);
+                this.mCodeMessage = jsonObj.getString(JsonName.HTTP_RESPONSE_STATUS_MESSAGE);
+            } catch (JSONException e) {
+                LogMe.w(TAG, "HttpResponse could not extract 'message' JSON field value.");
+            }
+        }
+    }
+
+    @Override
+    public String toString() {
+        return getCodeMessage();
+    }
 
     /**
-     * Get the ApiStatusCode name.
-     * @return Code name of ApiStatusCode.
+     * Extract the cookie from http response.
+     * @return The AuthCookie object containing the cookie header name and cookie header value;
      */
-    String getCodeName();
-
-    /**
-     * Set ApiStatusCode code name.
-     */
-    void setCodeName(String name);
-
-    /**
-     * Return the response message if API Server Status Message is the response of the request.
-     * @return The response code message of the performed http request.
-     */
-    String getCodeMessage();
-
-    /**
-     * Set the response message from API call.
-     */
-    void setCodeMessage(String message);
-
-    /**
-     * Return the response of the http request.
-     * @return The response body of the performed http request.
-     */
-    String getResponseBody();
-
-    /**
-     * Set the response body of the http request performed.
-     */
-    void setResponseBody(String responseBody);
-
-    /**
-     * Return true if http request is successful
-     */
-    boolean isReqSuccess();
-
-    /**
-     *  Set if http request success or not. Use in file downloading.
-     *  @param isReqSuccess Determine of http request made is successful.
-     */
-    void setReqSuccess(boolean isReqSuccess);
-
-    /**
-     * Assign with default value of HttpStatus for MessageCode and codeMessage base
-     * from passed result of http request from default constructor.
-     * @param responseObj The standard http status response
-     */
-    void initHttpResponse(Response responseObj);
-
+    private void extractCookie(Response response) {
+        if(response != null && response.getHeaders() != null && response.getHeaders().size() > 0) {
+            for(Header header : response.getHeaders()) {
+                if(header != null && header.getName() != null) {
+                    CookieManager cookieManager = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+                    cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
+                    CookieHandler.setDefault(cookieManager);
+                    if(header.getName().equals(HEADER_COOKIE_RESPONSE)) {
+                        String cookieName = HEADER_COOKIE;
+                        String cookieValue = header.getValue();
+                        LogMe.d(TAG, "extract header name: " + header.getName()
+                                + " " + header.getValue());
+                    }
+                }
+            }
+        }
+    }
 }

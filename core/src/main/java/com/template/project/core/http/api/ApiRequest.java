@@ -5,7 +5,10 @@ import android.content.Context;
 import com.squareup.okhttp.OkHttpClient;
 import com.template.project.core.AppConfiguration;
 import com.template.project.core.entity.User;
-import com.template.project.core.http.HttpParams;
+import com.template.project.core.http.HttpCallback;
+import com.template.project.core.http.api.ApiService;
+import com.template.project.core.http.api.ApiServiceType;
+import com.template.project.core.http.HttpStatusCode;
 import com.template.project.core.http.HttpResponse;
 import com.template.project.core.utils.LogMe;
 import com.template.project.core.utils.conn.NetConnUtil;
@@ -36,6 +39,10 @@ import retrofit.mime.TypedFile;
 import retrofit.mime.TypedInput;
 import retrofit.mime.TypedString;
 
+/**
+ * The http request calling API services. This is used with Retrofit
+ * and OkHttpClient for calling restful APIs.
+ */
 public class ApiRequest {
 
     private static final String TAG = ApiRequest.class.getSimpleName();
@@ -45,8 +52,8 @@ public class ApiRequest {
     private Context mCtx;
 
     private ApiServiceType mApiServiceType;
-    private ApiCallback mApiCallback;
-    private ApiResponse apiResponse;
+    private HttpCallback mHttpCallback;
+    private ApiResponse mApiResponse;
 
     // Determine if Retrofit will be used as synchronous, meaning no Callback to API service
     private boolean mIsSynchronous;
@@ -55,8 +62,8 @@ public class ApiRequest {
     // This can be used if Activity has been destroyed while request is in progress
     private boolean mIsDontNotifyCallback;
 
-    private RestAdapter.Builder retrofitRestBuilder;
-    private HttpErrorHandler httpErrorHandler;
+    private RestAdapter.Builder mRetrofitRestBuilder;
+    private HttpErrorHandler mHttpErrorHandler;
 
     public static final String HEADER_AUTHORIZATION = "Authorization";
 
@@ -64,14 +71,14 @@ public class ApiRequest {
      * Create ApiRequest instance to perform http calls.
      * @param ctx The Application or Activity context.
      * @param apiApiServiceType The API service to call.
-     * @param apiCallback The Callback of http call execution.
+     * @param httpCallback The Callback of http call execution.
      *
      */
-    public ApiRequest(Context ctx, ApiServiceType apiApiServiceType, ApiCallback apiCallback) {
+    public ApiRequest(Context ctx, ApiServiceType apiApiServiceType, HttpCallback httpCallback) {
         this.mCtx = ctx;
         this.mApiServiceType = apiApiServiceType;
-        this.mApiCallback = apiCallback;
-        httpErrorHandler = new HttpErrorHandler();
+        this.mHttpCallback = httpCallback;
+        mHttpErrorHandler = new HttpErrorHandler();
 
         OkHttpClient httpClient = new OkHttpClient();
         httpClient.setConnectTimeout(TIMEOUT, TimeUnit.SECONDS);
@@ -79,15 +86,15 @@ public class ApiRequest {
         httpClient.setWriteTimeout(TIMEOUT, TimeUnit.SECONDS);
         OkClient client = new OkClient(httpClient);
 
-        retrofitRestBuilder = new RestAdapter.Builder()
+        mRetrofitRestBuilder = new RestAdapter.Builder()
                 .setClient(new ApiRequestClient(client))
                 .setEndpoint(AppConfiguration.HOST)
-                .setErrorHandler(httpErrorHandler);
+                .setErrorHandler(mHttpErrorHandler);
 
         if(AppConfiguration.ENABLE_LOG) {
-            retrofitRestBuilder.setLogLevel(RestAdapter.LogLevel.FULL);
+            mRetrofitRestBuilder.setLogLevel(RestAdapter.LogLevel.FULL);
         } else {
-            retrofitRestBuilder.setLogLevel(RestAdapter.LogLevel.NONE);
+            mRetrofitRestBuilder.setLogLevel(RestAdapter.LogLevel.NONE);
         }
     }
 
@@ -103,8 +110,8 @@ public class ApiRequest {
             httpClient.setReadTimeout(requestTimeout, TimeUnit.SECONDS);
             httpClient.setWriteTimeout(requestTimeout, TimeUnit.SECONDS);
             OkClient client = new OkClient(httpClient);
-            retrofitRestBuilder.setClient(client);
-            // retrofitRestBuilder.setClient(new HttpConnectionClient(TIMEOUT));
+            mRetrofitRestBuilder.setClient(client);
+            // mRetrofitRestBuilder.setClient(new HttpConnectionClient(TIMEOUT));
         }
     }
 
@@ -120,9 +127,9 @@ public class ApiRequest {
      * Execute specific request based on the
      * {@link ApiServiceType}
      * set in the instance of this HttpRequest.
-     * @param httpParams HttpRequestParams object containing the needed data in http request.
+     * @param apiParams HttpRequestParams object containing the needed data in http request.
      */
-    public void executeHttpRequest(HttpParams httpParams) {
+    public void executeHttpRequest(ApiParams apiParams) {
         Callback retrofitCallback = new Callback() {
             @Override
             public void success(Object o, Response response) {
@@ -146,23 +153,23 @@ public class ApiRequest {
         if (mApiServiceType == ApiServiceType.USER_REGISTER) {
             //header.addAccessToken("my access token value");
             //header.addHeader("Set-Cookie or any header key name", "the header value");
-            retrofitRestBuilder.setRequestInterceptor(header);
-            ApiService apiService = retrofitRestBuilder.build().create(ApiService.class);
-            User user = httpParams.getUser();
+            mRetrofitRestBuilder.setRequestInterceptor(header);
+            ApiService apiService = mRetrofitRestBuilder.build().create(ApiService.class);
+            User user = apiParams.getUser();
             //response = apiService.register(user.getEmail(), user.getPassword());
             apiService.register(user.getEmail(), user.getPassword(), retrofitCallback);
         } else if (mApiServiceType == ApiServiceType.USER_UPDATE) {
-            retrofitRestBuilder.setRequestInterceptor(header);
-            ApiService apiService = retrofitRestBuilder.build().create(ApiService.class);
-            User user = httpParams.getUser();
+            mRetrofitRestBuilder.setRequestInterceptor(header);
+            ApiService apiService = mRetrofitRestBuilder.build().create(ApiService.class);
+            User user = apiParams.getUser();
             TypedString partEmail = new TypedString(user.getEmail());
             TypedString partPassword = new TypedString(user.getPassword());
             TypedFile partPhoto = new TypedFile("image/*", new File(""));
             apiService.updateUser(partEmail, partPassword, partPhoto, retrofitCallback);
         } else if(mApiServiceType == ApiServiceType.USER_GET_DETAILS) {
-            retrofitRestBuilder.setRequestInterceptor(header);
-            ApiService apiService = retrofitRestBuilder.build().create(ApiService.class);
-            User user = httpParams.getUser();
+            mRetrofitRestBuilder.setRequestInterceptor(header);
+            ApiService apiService = mRetrofitRestBuilder.build().create(ApiService.class);
+            User user = apiParams.getUser();
             apiService.getUserDetails(user.getEmail(), retrofitCallback);
         }
 
@@ -176,10 +183,10 @@ public class ApiRequest {
         try {
             if(response != null) {
                 responseBody = getBodyString(response);
-                mApiCallback.onSuccess(initApiResponse(response, responseBody));
+                mHttpCallback.onSuccess(initApiResponse(response, responseBody));
             }
         } catch (IOException e) {
-            mApiCallback.onFailed(initFailedResponse());
+            mHttpCallback.onFailed(initFailedResponse());
             LogMe.e(TAG, "status: " + response.getStatus() + " body: " + responseBody
                         + " ERROR " + e.toString());
         }
@@ -190,7 +197,7 @@ public class ApiRequest {
         Response r = cause.getResponse();
         if(r != null) {
             if(cause.getKind().equals(RetrofitError.Kind.NETWORK)) {
-                apiResponse = new HttpResponse(ApiStatusCode.SOCKET_CONNECTION_TIMEOUT);
+                mApiResponse = new ApiResponse(HttpStatusCode.SOCKET_CONNECTION_TIMEOUT);
             } else if(cause.getKind().equals(RetrofitError.Kind.HTTP)) {
                 try {
                     String body = getBodyString(r);
@@ -200,7 +207,7 @@ public class ApiRequest {
                     LogMe.d(TAG, "handleError initApiResponse ERROR " + e.toString());
                 }
             } else {
-                apiResponse = new HttpResponse(ApiStatusCode.UNEXPECTED_ERROR);
+                mApiResponse = new ApiResponse(HttpStatusCode.UNEXPECTED_ERROR);
             }
         } else {
                 /*
@@ -212,21 +219,21 @@ public class ApiRequest {
             if(cause != null && cause.getMessage() != null
                     && cause.getMessage().contains("authentication challenge is null")) {
                 LogMe.w(TAG, "handleError Response message: " + cause.getMessage());
-                apiResponse = new HttpResponse(ApiStatusCode.UNAUTHORIZED);
+                mApiResponse = new ApiResponse(HttpStatusCode.UNAUTHORIZED);
             }
             LogMe.e(TAG, "handleError Response is null");
         }
-        mApiCallback.onFailed(apiResponse);
+        mHttpCallback.onFailed(mApiResponse);
         return cause;
     }
 
     /*
      * Initialize ApiResponse object to pass to mApiCallback.
      */
-    private ApiResponse initApiResponse(Response response, String body) {
+    private HttpResponse initApiResponse(Response response, String body) {
         if(response != null) {
-            apiResponse = new HttpResponse(response, body);
-            return apiResponse;
+            mApiResponse = new ApiResponse(response, body);
+            return mApiResponse;
         } else {
             LogMe.w(TAG, "initRestResponse response null: " + response + " body: " + body);
         }
@@ -237,8 +244,8 @@ public class ApiRequest {
      * Initialize failed http request.
      * @return The replaced String body of request to pass to mApiCallback.
      */
-    private ApiResponse initFailedResponse() {
-        return new HttpResponse(ApiStatusCode.SOCKET_CONNECTION_TIMEOUT);
+    private HttpResponse initFailedResponse() {
+        return new ApiResponse(HttpStatusCode.SOCKET_CONNECTION_TIMEOUT);
     }
 
     // to convert byte stream of Response body of request
@@ -302,7 +309,7 @@ public class ApiRequest {
         public Response execute(Request request) throws IOException {
             if ( !NetConnUtil.getInstance().hasNetworkConnectivity(mCtx) ) {
                 // return REQUEST_TIMEOUT http status error if no network connectivity
-                return new Response(request.getUrl(), ApiStatusCode.REQUEST_TIMEOUT.getCode(),
+                return new Response(request.getUrl(), HttpStatusCode.REQUEST_TIMEOUT.getCode(),
                         null, null, null);
             } else {
                 return client.execute(request);

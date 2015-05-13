@@ -1,9 +1,9 @@
-package com.template.project.core.http.api;
+package com.template.project.core.http;
 
 /**
  * API Server Status Message codes and standard Http Status Codes
  */
-public enum ApiStatusCode {
+public enum HttpStatusCode {
 
     OK(200, "ok", true),
     CREATED(201, "created", true),
@@ -24,7 +24,7 @@ public enum ApiStatusCode {
     private String codeName;
     private boolean isSuccess;
 
-    private ApiStatusCode(int val, String codeName, boolean isSuccess) {
+    private HttpStatusCode(int val, String codeName, boolean isSuccess) {
         this.value = val;
         this.codeName = codeName;
         this.isSuccess = isSuccess;

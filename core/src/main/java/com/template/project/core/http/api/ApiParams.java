@@ -1,8 +1,8 @@
-package com.template.project.core.http;
+package com.template.project.core.http.api;
 
 import com.template.project.core.entity.User;
 
-public class HttpParams {
+public class ApiParams {
 
     private User mUser;
 

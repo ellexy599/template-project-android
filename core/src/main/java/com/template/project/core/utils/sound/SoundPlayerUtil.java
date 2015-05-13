@@ -15,15 +15,15 @@ import com.template.project.core.utils.LogMe;
  * </pre>
  * to be able read sound file in app cache internal or external directory.
  */
-public class SoundPlayer {
+public class SoundPlayerUtil {
 
-    private final String TAG = SoundPlayer.class.getSimpleName();
+    private final String TAG = SoundPlayerUtil.class.getSimpleName();
 
     private Context ctx;
 
     private ArrayList<SoundPlayerFile> arrSpFiles;
 
-    public SoundPlayer(Context ctx) {
+    public SoundPlayerUtil(Context ctx) {
         this.ctx = ctx;
         arrSpFiles = new ArrayList<>();
     }
