@@ -1,6 +1,6 @@
 package com.template.project.core.database;
 
-import com.template.project.core.entity.User;
+import com.template.project.core.entity.user.User;
 
 import java.util.ArrayList;
 

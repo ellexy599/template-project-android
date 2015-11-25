@@ -52,6 +52,13 @@
     @retrofit.http.* <methods>;
 }
 
+# Apache Commons Lang and Commons Net
+-keep class org.apache.commons.** { *; }
+-keep class org.apache.commons.lang3.** { *; }
+-keep interface org.apache.commons.lang3.** { *; }
+-keep class org.apache.commons.net.** { *; }
+-keep interface org.apache.commons.net.** { *; }
+
 # Picasso image loader
 -keep class com.squareup.picasso.** { *; }
 -keep interface com.squareup.picasso.** { *; }

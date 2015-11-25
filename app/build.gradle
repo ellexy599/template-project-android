@@ -11,22 +11,112 @@ android {
 
     defaultConfig {
         applicationId project.GROUP
-	minSdkVersion Integer.parseInt(project.ANDROID_BUILD_MIN_SDK_VERSION)
+	    minSdkVersion Integer.parseInt(project.ANDROID_BUILD_MIN_SDK_VERSION)
         targetSdkVersion Integer.parseInt(project.ANDROID_BUILD_TARGET_SDK_VERSION)
         versionName project.VERSION_NAME
         versionCode Integer.parseInt(project.VERSION_CODE)
     }
 
+    signingConfigs {
+        // location of keystores are usually relative to the root of the project
+        devSigningConfig {
+            storeFile file("dev_keystore.jks")
+            storePassword "password"
+            keyAlias "templateandroidproject"
+            keyPassword "password"
+        }
+
+        prodSigningConfig {
+            storeFile file("prod_keystore.jks")
+            storePassword "password"
+            keyAlias "templateandroidproject"
+            keyPassword "password"
+        }
+    }
+
+    // override defaultConfig base configuration
+    productFlavors {
+        devFlavor {
+            applicationId project.DEV_PACKAGE_NAME
+            minSdkVersion Integer.parseInt(project.ANDROID_BUILD_MIN_SDK_VERSION)
+            targetSdkVersion Integer.parseInt(project.ANDROID_BUILD_TARGET_SDK_VERSION)
+            versionCode Integer.parseInt(project.DEV_VERSION_CODE)
+            versionName project.DEV_VERSION_NAME
+        }
+        prodFlavor {
+            applicationId project.PACKAGE_NAME
+            minSdkVersion Integer.parseInt(project.ANDROID_BUILD_MIN_SDK_VERSION)
+            targetSdkVersion Integer.parseInt(project.ANDROID_BUILD_TARGET_SDK_VERSION)
+            versionCode Integer.parseInt(project.VERSION_CODE)
+            versionName project.VERSION_NAME
+        }
+    }
+
     buildTypes {
         // We need ProGuard for debug builds too to avoid reaching the dex limit
         debug {
-            minifyEnabled true
+            minifyEnabled false
 	        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-project.txt'
+            buildConfigField "int", "SERVER_TYPE", "0"
+            buildConfigField "String", "API_SERVER", project.DEV_API_SERVER
+            resValue "string",  "database_name", project.DEV_DATABASE_NAME
+        }
+
+        beta {
+            minifyEnabled false
+            debuggable true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-project.txt'
+            signingConfig signingConfigs.devSigningConfig
+            buildConfigField "int", "SERVER_TYPE", "0"
+            buildConfigField "String", "API_SERVER", project.DEV_API_SERVER
+            resValue "string",  "database_name", project.DEV_DATABASE_NAME
         }
 
         release {
             minifyEnabled true
+            debuggable false
 	        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-project.txt'
+            signingConfig signingConfigs.prodSigningConfig
+            buildConfigField "int", "SERVER_TYPE", "2"
+            buildConfigField "String", "API_SERVER", project.API_SERVER
+            resValue "string",  "database_name", project.DATABASE_NAME
+        }
+    }
+
+    // Rename generated APK build based on app name, version name, flavor and buildType
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            def flavor = "devFlavor";
+            if (variant.productFlavors.size() > 0)
+                flavor = variant.productFlavors.get(0);
+
+            def flavor_name = "devFlavor";
+            if (flavor.name == "devFlavor")
+                flavor_name = "devFlavor";
+            else if (flavor.name == "prodFlavor")
+                flavor_name = "prodFlavor";
+
+            def build_name = "debug";
+            if (variant.buildType.name == "debug")
+                build_name = "Debug"
+            else if (variant.buildType.name == "release")
+                build_name = "Release"
+            else if (variant.buildType.name == "beta")
+                build_name = "Beta"
+
+            def flavor_build_name = flavor_name + build_name;
+
+            def apk_name = project.APP_NAME;
+            if (variant.buildType.name == "debug")
+                apk_name = project.DEV_APP_NAME
+            else if (flavor.name == "devFlavor")
+                apk_name = project.DEV_APP_NAME;
+            else if (flavor.name == "prodFlavor")
+                apk_name = project.APP_NAME;
+
+            def finalName = apk_name + "_" + variant.versionName + "_" + flavor_build_name + ".apk";
+
+            output.outputFile = new File(output.outputFile.parent, finalName)
         }
     }
 

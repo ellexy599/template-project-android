@@ -2,7 +2,6 @@ package com.template.project.core.utils.conn;
 
 import com.template.project.core.utils.LogMe;
 
-import android.app.Activity;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;

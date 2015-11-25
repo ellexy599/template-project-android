@@ -13,6 +13,9 @@ import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Date Calendar timestamp conversion utility class.
+ */
 public class TimestampCalendarUtil {
 
     private static final String TAG = TimestampCalendarUtil.class.getSimpleName();

@@ -1,8 +1,6 @@
-package com.template.project.core.http;
+package com.template.project.core.request.api;
 
-import retrofit.client.Response;
-
-public interface HttpResponse {
+public interface ApiResponse {
 
     /**
      * Get the MessageCode of the reponse of http request.
@@ -58,12 +56,5 @@ public interface HttpResponse {
      *  @param isReqSuccess Determine of http request made is successful.
      */
     void setReqSuccess(boolean isReqSuccess);
-
-    /**
-     * Assign with default value of HttpStatus for MessageCode and codeMessage base
-     * from passed result of http request from default constructor.
-     * @param responseObj The standard http status response
-     */
-    void initHttpResponse(Response responseObj);
 
 }

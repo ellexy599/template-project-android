@@ -1,6 +1,6 @@
-package com.template.project.core.http.api;
+package com.template.project.core.request.api;
 
-import com.template.project.core.entity.User;
+import com.template.project.core.entity.user.User;
 
 public class ApiParams {
 
@@ -13,4 +13,5 @@ public class ApiParams {
     public void setUser(User mUser) {
         this.mUser = mUser;
     }
+
 }

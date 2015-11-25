@@ -6,7 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.util.Log;
 
-import com.template.project.core.entity.User;
+import com.template.project.core.entity.user.User;
 import com.template.project.core.utils.FieldValidator;
 
 import java.util.ArrayList;

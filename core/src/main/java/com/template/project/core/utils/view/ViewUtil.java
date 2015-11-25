@@ -15,7 +15,6 @@ public class ViewUtil {
 
     /**
      * Convert a DIP value to pixel.
-     *
      * @param context
      * @param dip     dip value
      * @return pixel value which is calculated depending on your current device

@@ -9,7 +9,7 @@ import com.squareup.picasso.Picasso;
 import java.io.File;
 
 /**
- * Utility class for setting image to imageview
+ * Utility class for setting image to ImageView with the use of Picasso library.
  */
 public class ImageLoaderUtil {
 
