@@ -35,9 +35,6 @@ proguard_logs
 build/
 app/build
 
-#gradle properties file for configuring proxy
-gradle.properties
-
 #IntelliJ project files and folders
 out/
 bin/
