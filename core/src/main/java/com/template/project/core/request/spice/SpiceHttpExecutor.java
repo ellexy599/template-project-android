@@ -1,4 +1,4 @@
-package com.template.project.core.request.network;
+package com.template.project.core.request.spice;
 
 import android.content.Context;
 
@@ -8,17 +8,17 @@ import com.octo.android.robospice.request.SpiceRequest;
 import com.octo.android.robospice.request.listener.RequestListener;
 
 /**
- * Makes RetroHttpRequest asynchronous by using the NetworkHttpCallback.
+ * Makes http request asynchronous by using the NetworkHttpCallback.
  */
-public class NetworkHttpExecutor {
+public class SpiceHttpExecutor {
 
-    private static NetworkHttpExecutor sNetworkCallExecutor;
+    private static SpiceHttpExecutor sNetworkCallExecutor;
 
     private SpiceManager spiceManager;
 
-    public static NetworkHttpExecutor getInstance() {
+    public static SpiceHttpExecutor getInstance() {
         if (sNetworkCallExecutor == null) {
-            sNetworkCallExecutor = new NetworkHttpExecutor();
+            sNetworkCallExecutor = new SpiceHttpExecutor();
         }
         return sNetworkCallExecutor;
     }
@@ -80,7 +80,7 @@ public class NetworkHttpExecutor {
     /** Execute http call on Robospice context to avoid network call on main thread. */
     public void executeHttpCall(Context context, NetworkHttpCallback networkHttpCallback) {
         if (spiceManager == null) {
-            spiceManager = new SpiceManager(NetworkHttpService.class);
+            spiceManager = new SpiceManager(SpiceHttpService.class);
         }
         if (spiceManager != null) {
             NetworkRequest networkRequest = new NetworkRequest(networkHttpCallback);
@@ -93,7 +93,10 @@ public class NetworkHttpExecutor {
         }
     }
 
-    /** Release all network calls performed by Robospice. */
+    /**
+     * Release all network calls performed by Robospice. This can/should be called onDestroy
+     * or onStop of the Activity/Fragment.
+     */
     public void releaseNetworkCalls() {
         if (spiceManager != null && spiceManager.isStarted()) {
             spiceManager.cancelAllRequests();

@@ -54,9 +54,10 @@ android {
 
     buildTypes {
         // We need ProGuard for debug builds too to avoid reaching the dex limit
-        debug {
+        development {
             minifyEnabled false
 	        proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-project.txt'
+            signingConfig signingConfigs.devSigningConfig
             buildConfigField "int", "SERVER_TYPE", "0"
             buildConfigField "String", "API_SERVER", project.DEV_API_SERVER
             resValue "string",  "database_name", project.DEV_DATABASE_NAME
@@ -96,9 +97,9 @@ android {
             else if (flavor.name == "prodFlavor")
                 flavor_name = "prodFlavor";
 
-            def build_name = "debug";
-            if (variant.buildType.name == "debug")
-                build_name = "Debug"
+            def build_name = "Development";
+            if (variant.buildType.name == "development")
+                build_name = "Development"
             else if (variant.buildType.name == "release")
                 build_name = "Release"
             else if (variant.buildType.name == "beta")
@@ -107,14 +108,16 @@ android {
             def flavor_build_name = flavor_name + build_name;
 
             def apk_name = project.APP_NAME;
-            if (variant.buildType.name == "debug")
+            if (variant.buildType.name == "development")
                 apk_name = project.DEV_APP_NAME
             else if (flavor.name == "devFlavor")
                 apk_name = project.DEV_APP_NAME;
             else if (flavor.name == "prodFlavor")
                 apk_name = project.APP_NAME;
 
-            def finalName = apk_name + "_" + variant.versionName + "_" + flavor_build_name + ".apk";
+            //def finalName = apk_name + "_" + variant.versionName + "_" + flavor_build_name + ".apk";
+
+            def finalName = apk_name + "_" + variant.versionName + "_" + build_name + ".apk";
 
             output.outputFile = new File(output.outputFile.parent, finalName)
         }
@@ -143,8 +146,8 @@ dependencies {
      3. core project library
      4. jar files library
     */
-    compile 'com.android.support:support-v4:21.0.+'
-    compile 'com.android.support:appcompat-v7:21.0.+'
+    compile 'com.android.support:support-v4:23.1.+'
+    compile 'com.android.support:appcompat-v7:23.1.+'
     compile project(':core')
     compile fileTree(dir: 'libs', include: ['*.jar'])
 }

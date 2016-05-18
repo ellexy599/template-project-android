@@ -16,6 +16,6 @@
             android:label="@string/project_library_name">
     </application>
 
-    <receiver android:name=".alarm.AlarmBroadcastReceiver" />
+    <receiver android:name="com.template.project.core.receiver.NotifPubReceiver" />
 
 </manifest>

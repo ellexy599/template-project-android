@@ -9,7 +9,7 @@ Template Android Project
 
 * To build the project, run the command
 ```groovy
-gradle clean assembleDevFlavorBeta
+gradle clean assembleDevFlavorDevelopment
 ```
 or for a release build run
 ```groovy

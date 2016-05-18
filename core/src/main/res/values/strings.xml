@@ -2,4 +2,12 @@
 
     <string name="project_library_name">TemplateProjectCore</string>
 
+    <string name="permission_request_camera">
+        We need your permission so you can take picture
+    </string>
+
+    <string name="permission_request_camera_denied">
+        Please grant the app to use the camera to be able to take picture.
+    </string>
+
 </resources>

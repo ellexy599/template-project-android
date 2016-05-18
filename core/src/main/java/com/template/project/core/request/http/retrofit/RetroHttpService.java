@@ -11,13 +11,13 @@ import retrofit.http.Path;
 
 public interface RetroHttpService {
 
-    @POST("/users")
+    @POST("/user")
     public void userRegister(@Body TypeJsonString playerJson, Callback<Response> callback);
 
-    @GET("/users/{userId}")
+    @GET("/user/{userId}")
     public void userGetDetails(@Path("userId") String userId, Callback<Response> callback);
 
-    @POST("/users/{userId}")
+    @POST("/user/{userId}")
     public void userUpdateDetails(@Path("userId") String userId, @Body TypeJsonString playerJson,
                                   Callback<Response> callback);
 
